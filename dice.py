@@ -1,5 +1,6 @@
 import cmd
 import random
+from collections import namedtuple
 
 
 class DiceRollInterface(cmd.Cmd):
@@ -9,7 +10,7 @@ class DiceRollInterface(cmd.Cmd):
         """Do stat rolls (4d6-drop 1 six times)."""
         d = Die()
         for _ in range(6):
-            print((d(6)*4).drop(1))
+            print((d(6) * 4).drop(1))
 
     def do_shell(self, roll):
         """Do a general roll, as specified by a string.
@@ -26,8 +27,10 @@ class DiceRollInterface(cmd.Cmd):
         """
 
         self._roll = roll
+        rollObject = None
         try:
-            self._parse_roll()
+            rollObject = self._parse_roll()
+            self._execute_roll(rollObject)
         except DiceException as e:
             print(e)
 
@@ -59,12 +62,17 @@ class DiceRollInterface(cmd.Cmd):
         self._roll = self._roll[chars:]
 
     def _error(self):
-        # Syntax error!
         column = self._line_len - len(self._roll) + 2
         raise DiceSyntaxError(f"Syntax error at column {column}!")
 
-    # A recursive descent parser will be used for simplicity
     def _parse_roll(self):
+        """Parse the roll string self._roll and execute the roll.
+
+        Returns a namedtuple containing properties of the role.
+
+        Implementation detail: the parser is a recursive descent parser.
+        """
+
         self._line_len = len(self._roll)
 
         num_of_rolls = self._parse_num_of_rolls()
@@ -84,13 +92,31 @@ class DiceRollInterface(cmd.Cmd):
             self._consume(1)
             num_of_times = self._parse_num_of_times()
 
-        if self._roll:  # should be empty at end
-            self._error()
+        self._roll_should_be_empty()
 
+        return Roll(
+            num_to_drop=num_to_drop,
+            num_of_rolls=num_of_rolls,
+            num_of_sides=num_of_sides,
+            num_of_times=num_of_times
+            )
+
+    def _execute_roll(self, roll):
         # Execute the roll
         d = Die()
-        for _ in range(num_of_times):
-            print((d(num_of_sides)*num_of_rolls).drop(num_to_drop))
+        for _ in range(roll.num_of_times):
+            completedRoll = (
+                d(roll.num_of_sides)
+                * roll.num_of_rolls).drop(roll.num_to_drop)
+            print(completedRoll)
+
+    def _roll_should_be_empty(self):
+        if self._roll:
+            self._error()
+
+
+Roll = namedtuple(
+    'Roll', ['num_of_times', 'num_of_sides', 'num_of_rolls', 'num_to_drop'])
 
 
 class Die:
@@ -111,7 +137,7 @@ class Die:
 
     def __mul__(self, rolls):
         new_die = Die(self)
-        for _ in range(len(self._rolls)*(rolls - 1)):
+        for _ in range(len(self._rolls) * (rolls - 1)):
             new_die._roll()
         # print('{}*d => {}'.format(rolls, new_die._rolls))
         return new_die
