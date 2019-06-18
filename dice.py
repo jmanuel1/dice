@@ -15,7 +15,8 @@ class DiceRollInterface(cmd.Cmd):
         """Do a general roll, as specified by a string.
 
         The syntax, in EBNF, is:
-        roll = num of rolls, "d", num of sides, ["-drop", num to drop], ["*", num of times] ;
+        roll = num of rolls, "d", num of sides, ["-drop", num to drop],
+            ["*", num of times] ;
         num of rolls = INTEGER ;
         num of sides = INTEGER ;
         num to drop = INTEGER ;
@@ -24,69 +25,72 @@ class DiceRollInterface(cmd.Cmd):
         For example, the stat rolls would be the command !4d6-drop1*6.
         """
 
-        line_len = len(roll)
-        # A recursive descent parser will be used for simplicity
-        def parse_roll():
-            num_of_rolls = parse_num_of_rolls()
-
-            if not roll.startswith("d"):
-                error()
-            consume(1)
-            num_of_sides = parse_num_of_sides()
-
-            num_to_drop = 0
-            if roll.startswith("-drop"):
-                consume(5)
-                num_to_drop = parse_num_to_drop()
-
-            num_of_times = 1
-            if roll.startswith("*"):
-                consume(1)
-                num_of_times = parse_num_of_times()
-
-            if roll: # should be empty at end
-                error()
-
-            # Execute the roll
-            d = Die()
-            for _ in range(num_of_times):
-                print((d(num_of_sides)*num_of_rolls).drop(num_to_drop))
-
-        def parse_num_of_rolls():
-            return lex_INTEGER()
-
-        def parse_num_of_sides():
-            return lex_INTEGER()
-
-        def parse_num_to_drop():
-            return lex_INTEGER()
-
-        def parse_num_of_times():
-            return lex_INTEGER()
-
-        def lex_INTEGER():
-            index = 1
-            while True:
-                if not roll[:index].isdecimal() or index > len(roll):
-                    break
-                index += 1
-            if index == 1: error()
-            integer = int(roll[:index - 1])
-            consume(index - 1)
-            return integer
-
-        def consume(chars):
-            nonlocal roll
-            roll = roll[chars:]
-
-        def error():
-            # Syntax error!
-            raise Exception(f"Syntax error at column {line_len - len(roll) + 2}!")
-
+        self._roll = roll
         try:
-            parse_roll()
-        except Exception as e:
+            self._parse_roll()
+        except DiceException as e:
             print(e)
+
+    def _parse_num_of_rolls(self):
+        return self._lex_INTEGER()
+
+    def _parse_num_of_sides(self):
+        return self._lex_INTEGER()
+
+    def _parse_num_to_drop(self):
+        return self._lex_INTEGER()
+
+    def _parse_num_of_times(self):
+        return self._lex_INTEGER()
+
+    def _lex_INTEGER(self):
+        index = 1
+        while True:
+            if not self._roll[:index].isdecimal() or index > len(self._roll):
+                break
+            index += 1
+        if index == 1:
+            self._error()
+        integer = int(self._roll[:index - 1])
+        self._consume(index - 1)
+        return integer
+
+    def _consume(self, chars):
+        self._roll = self._roll[chars:]
+
+    def _error(self):
+        # Syntax error!
+        column = self._line_len - len(self._roll) + 2
+        raise DiceSyntaxError(f"Syntax error at column {column}!")
+
+    # A recursive descent parser will be used for simplicity
+    def _parse_roll(self):
+        self._line_len = len(self._roll)
+
+        num_of_rolls = self._parse_num_of_rolls()
+
+        if not self._roll.startswith("d"):
+            self._error()
+        self._consume(1)
+        num_of_sides = self._parse_num_of_sides()
+
+        num_to_drop = 0
+        if self._roll.startswith("-drop"):
+            self._consume(5)
+            num_to_drop = self._parse_num_to_drop()
+
+        num_of_times = 1
+        if self._roll.startswith("*"):
+            self._consume(1)
+            num_of_times = self._parse_num_of_times()
+
+        if self._roll:  # should be empty at end
+            self._error()
+
+        # Execute the roll
+        d = Die()
+        for _ in range(num_of_times):
+            print((d(num_of_sides)*num_of_rolls).drop(num_to_drop))
 
 
 class Die:
@@ -122,6 +126,14 @@ class Die:
 
     def _roll(self):
         self._rolls.append(random.randint(1, self._sides))
+
+
+class DiceException(Exception):
+    pass
+
+
+class DiceSyntaxError(SyntaxError, DiceException):
+    pass
 
 
 random.seed()
