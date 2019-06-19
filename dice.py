@@ -1,5 +1,6 @@
 import cmd
 import random
+import logging
 from collections import namedtuple
 
 
@@ -99,7 +100,7 @@ class DiceRollInterface(cmd.Cmd):
             num_of_rolls=num_of_rolls,
             num_of_sides=num_of_sides,
             num_of_times=num_of_times
-            )
+        )
 
     def _execute_roll(self, roll):
         # Execute the roll
@@ -121,9 +122,10 @@ Roll = namedtuple(
 
 class Die:
 
-    def __init__(self, _original=None):
+    def __init__(self, _original=None, logger=logging.getLogger(__name__)):
         self._rolls = []
         self._sides = -1
+        self._logger = logger
         if _original is not None:
             self._rolls = _original._rolls[:]
             self._sides = _original._sides
@@ -132,14 +134,17 @@ class Die:
         new_die = Die(self)
         new_die._sides = sides
         new_die._roll()
-        # print('d({}) => {}'.format(sides, new_die._rolls))
+        self._logger.debug(
+            'A die was rolled: d({}) => {}'.format(sides, new_die._rolls))
         return new_die
 
     def __mul__(self, rolls):
         new_die = Die(self)
         for _ in range(len(self._rolls) * (rolls - 1)):
             new_die._roll()
-        # print('{}*d => {}'.format(rolls, new_die._rolls))
+        logMessage = 'A die was rolled multiple times: {}*d => {}'.format(
+            rolls, new_die._rolls)
+        self._logger.debug(logMessage)
         return new_die
 
     def drop(self, num):
