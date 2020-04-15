@@ -167,6 +167,10 @@ class DiceSyntaxError(SyntaxError, DiceException):
     pass
 
 
-random.seed()
-interface = DiceRollInterface()
-interface.cmdloop()
+def main():
+    random.seed()
+    interface = DiceRollInterface()
+    interface.cmdloop()
+
+if __name__ == '__main__':
+    main()
