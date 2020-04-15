@@ -9,3 +9,5 @@ Project](https://docs.python-guide.org/writing/structure/).*
 | ----------- | ------------------------------------ |
 | `./dice.py` | The dice roller script (main module) |
 | `./LICENSE` | The project license (MIT)            |
+| `./Makefile` | File to run various development tasks |
+| `requirements.txt` | Dependencies needed for development |
